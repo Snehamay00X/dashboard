@@ -19,33 +19,4 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(attr, { status: 201 });
 }
 
-/* ================= DELETE ATTRIBUTE ================= */
-export async function DELETE(
-  req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }
-) {
-  await dbConnect();
 
-  const { id } = await ctx.params; // ✅ Next.js 16 fix
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return NextResponse.json(
-      { message: "Invalid attribute id" },
-      { status: 400 }
-    );
-  }
-
-  const deleted = await AttributeDefinition.findByIdAndDelete(id).lean();
-
-  if (!deleted) {
-    return NextResponse.json(
-      { message: "Attribute not found" },
-      { status: 404 }
-    );
-  }
-
-  return NextResponse.json(
-    { message: "Attribute deleted", id },
-    { status: 200 }
-  );
-}
