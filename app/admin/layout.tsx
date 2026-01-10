@@ -1,11 +1,4 @@
-import Link from "next/link";
-
-const nav = [
-  { name: "Dashboard", href: "/admin" },
-  { name: "Products", href: "/admin/products" },
-  { name: "Brands", href: "/admin/brands" },
-  { name: "Attributes", href: "/admin/attributes" },
-];
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 export default function AdminLayout({
   children,
@@ -13,37 +6,42 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen flex bg-gray-50">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r p-4 hidden md:block">
-        <h1 className="text-xl font-bold mb-8">Catalog Admin</h1>
+      <AdminSidebar />
 
-        <nav className="space-y-2">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-
-      {/* MAIN */}
+      {/* MAIN AREA */}
       <div className="flex-1 flex flex-col">
         {/* TOP BAR */}
-        <header className="h-14 bg-white border-b flex items-center justify-between px-6">
-          <p className="font-medium">Admin Panel</p>
+        <header className="h-24 bg-white  flex items-center justify-between px-8">
+          <div>
+            <p className="text-sm text-gray-500">Admin Panel</p>
+            <p className="text-base font-medium text-gray-900">
+              Catalog Management
+            </p>
+          </div>
+
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-300 rounded-full" />
-            <span className="text-sm text-gray-600">Admin</span>
+            <div className="w-9 h-9 bg-gray-100 border rounded-full flex items-center justify-center text-sm font-semibold text-gray-700">
+              A
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-medium text-gray-800">
+                Admin
+              </p>
+              <p className="text-xs text-gray-500">
+                Super user
+              </p>
+            </div>
           </div>
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-[1400px] mx-auto px-8 py-8">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

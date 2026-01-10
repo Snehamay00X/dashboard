@@ -11,13 +11,15 @@ export default function ProductRow({
 }) {
   return (
     <div
-      className={`flex items-center justify-between p-4 border rounded-xl transition ${
-        !product.isActive ? "opacity-40 bg-gray-50" : "bg-white"
+      className={`flex items-center justify-between px-5 py-4 transition ${
+        product.isActive
+          ? "bg-white"
+          : "bg-gray-50 text-gray-400"
       }`}
     >
-      <div>
-        <p className="font-medium">{product.name}</p>
-        <p className="text-sm text-gray-500">
+      <div className="min-w-0">
+        <p className="font-medium truncate">{product.name}</p>
+        <p className="text-sm text-gray-500 truncate">
           {product.brand?.name || "No brand"}
         </p>
       </div>
@@ -25,13 +27,13 @@ export default function ProductRow({
       <button
         disabled={loading}
         onClick={() => onToggle(product._id, !product.isActive)}
-        className={`relative w-12 h-6 rounded-full transition ${
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
           product.isActive ? "bg-green-500" : "bg-gray-300"
-        }`}
+        } ${loading ? "opacity-60" : ""}`}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 bg-white rounded-full transition ${
-            product.isActive ? "right-0.5" : "left-0.5"
+          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+            product.isActive ? "translate-x-5" : "translate-x-1"
           }`}
         />
       </button>
