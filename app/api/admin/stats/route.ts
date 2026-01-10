@@ -15,18 +15,21 @@ export async function GET() {
     totalBrands,
     activeBrands,
     totalAttributes,
+    noImageProducts,
   ] = await Promise.all([
     Product.countDocuments(),
     Product.countDocuments({ isActive: true }),
     Brand.countDocuments(),
     Brand.countDocuments({ isActive: true }),
     AttributeDefinition.countDocuments(),
+    Product.countDocuments({ images: { $size: 0 } })
   ]);
 
   return NextResponse.json({
     products: {
       total: totalProducts,
       active: activeProducts,
+      noImages: noImageProducts
     },
     brands: {
       total: totalBrands,

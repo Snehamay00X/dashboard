@@ -48,10 +48,11 @@ export async function POST(req: NextRequest) {
  */
 
 
+
+
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-
     const { searchParams } = req.nextUrl;
 
     const page = Math.max(Number(searchParams.get("page") || 1), 1);
@@ -60,16 +61,23 @@ export async function GET(req: NextRequest) {
 
     const brand = searchParams.get("brand");
     const search = searchParams.get("search")?.trim();
+    const isActive = searchParams.get("isActive");
+    const hasImages = searchParams.get("hasImages");
 
-    const match: any = { isActive: true };
+    const match: any = {};
 
+    /* ---------- Brand ---------- */
     if (brand && mongoose.Types.ObjectId.isValid(brand)) {
       match.brand = new mongoose.Types.ObjectId(brand);
     }
 
+    /* ---------- Active ---------- */
+    if (isActive === "true") match.isActive = true;
+    if (isActive === "false") match.isActive = false;
+
+    /* ---------- Search (name + attributes) ---------- */
     if (search) {
       const regex = new RegExp(search, "i");
-
       match.$or = [
         { name: regex },
         {
@@ -89,11 +97,24 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const pipeline:PipelineStage[] = [
+    /* ---------- Image filter ---------- */
+    if (hasImages === "true") {
+      match.$expr = {
+        ...(match.$expr || {}),
+        $gt: [{ $size: { $ifNull: ["$images", []] } }, 0],
+      };
+    }
+
+    if (hasImages === "false") {
+      match.$expr = {
+        ...(match.$expr || {}),
+        $eq: [{ $size: { $ifNull: ["$images", []] } }, 0],
+      };
+    }
+
+    /* ---------- Main pipeline ---------- */
+    const basePipeline: PipelineStage[] = [
       { $match: match },
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "brands",
@@ -103,27 +124,44 @@ export async function GET(req: NextRequest) {
         },
       },
       { $unwind: { path: "$brand", preserveNullAndEmptyArrays: true } },
+    ];
+
+    /* ---------- Products ---------- */
+    const productsPipeline: PipelineStage[] = [
+      ...basePipeline,
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
       {
         $project: {
           name: 1,
           brand: { _id: 1, name: 1 },
           createdAt: 1,
+          isActive: 1,
         },
       },
     ];
 
-    const [products, count] = await Promise.all([
-      Product.aggregate(pipeline),
-      Product.countDocuments(match),
+    /* ---------- Count ---------- */
+    const countPipeline: PipelineStage[] = [
+      ...basePipeline,
+      { $count: "total" },
+    ];
+
+    const [products, countResult] = await Promise.all([
+      Product.aggregate(productsPipeline),
+      Product.aggregate(countPipeline),
     ]);
+
+    const total = countResult[0]?.total || 0;
 
     return NextResponse.json({
       products,
       pagination: {
         page,
         limit,
-        total: count,
-        totalPages: Math.ceil(count / limit),
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (err) {
@@ -134,4 +172,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
 
