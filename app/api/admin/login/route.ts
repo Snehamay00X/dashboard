@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { signSession, COOKIE_NAME } from "@/lib/adminAuth";
 
 export async function POST(req: Request) {
@@ -8,25 +7,24 @@ export async function POST(req: Request) {
     username !== process.env.ADMIN_USERNAME ||
     password !== process.env.ADMIN_PASSWORD
   ) {
-    return NextResponse.json(
-      { error: "Invalid credentials" },
+    return new Response(
+      JSON.stringify({ error: "Invalid credentials" }),
       { status: 401 }
     );
   }
 
   const token = signSession(username);
 
-  const res = NextResponse.json({ success: true });
-
-  res.cookies.set({
-  name: COOKIE_NAME,
-  value: token,
-  httpOnly: true,
-  sameSite: "lax",
-  path: "/",
-  secure: process.env.NODE_ENV === "production",
-});
-
-
-  return res;
+  return new Response(
+    JSON.stringify({ success: true }),
+    {
+      status: 200,
+      headers: {
+        "Set-Cookie": `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; ${
+          process.env.NODE_ENV === "production" ? "Secure;" : ""
+        }`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 }
