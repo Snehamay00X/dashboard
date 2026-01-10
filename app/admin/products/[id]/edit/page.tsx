@@ -133,6 +133,20 @@ export default function EditProduct() {
     setExistingImages((prev) => prev.filter((_, index) => index !== i));
   }
 
+  function moveImage(from: number, to: number) {
+  const combined = [
+    ...existingImages.map((url) => ({ type: "old" as const, value: url })),
+    ...newImages.map((file) => ({ type: "new" as const, value: file })),
+  ];
+
+  const item = combined.splice(from, 1)[0];
+  combined.splice(to, 0, item);
+
+  setExistingImages(combined.filter(i => i.type === "old").map(i => i.value));
+  setNewImages(combined.filter(i => i.type === "new").map(i => i.value));
+}
+
+
   async function updateProduct() {
   try {
     // 1. Upload newly added images
@@ -229,8 +243,8 @@ export default function EditProduct() {
           </div>
 
           {/* ATTRIBUTES */}
-<div className="bg-white p-6 rounded-xl shadow-sm">
-  <h2 className="font-medium mb-4">Attributes</h2>
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <h2 className="font-medium mb-4">Attributes</h2>
 
   {/* ADD ATTRIBUTE */}
   <div ref={dropdownRef} className="relative mb-6 z-40">
@@ -402,54 +416,70 @@ export default function EditProduct() {
           </label>
 
           {/* IMAGE GRID */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* EXISTING IMAGES */}
-            {existingImages.map((img, i) => (
-              <div
-                key={`old-${i}`}
-                className="relative group rounded-lg overflow-hidden border bg-gray-100"
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            ...existingImages.map((url) => ({
+              type: "old" as const,
+              url,
+            })),
+            ...newImages.map((file) => ({
+              type: "new" as const,
+              file,
+            })),
+          ].map((img, i) => (
+            <div
+              key={i}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData("index", i.toString())}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                const from = Number(e.dataTransfer.getData("index"));
+                moveImage(from, i);
+              }}
+              className="relative group rounded-lg overflow-hidden border bg-gray-100 cursor-move"
+            >
+              <img
+                src={
+                  img.type === "old"
+                    ? img.url
+                    : URL.createObjectURL(img.file)
+                }
+                className="w-full h-28 object-cover"
+              />
+
+              {/* PRIMARY */}
+              {i === 0 && (
+                <span className="absolute top-1 left-1 bg-black text-white text-xs px-2 py-0.5 rounded">
+                  Primary
+                </span>
+              )}
+
+              {/* REMOVE */}
+              <button
+                onClick={() => {
+                  if (img.type === "old") {
+                    setExistingImages(existingImages.filter((_, x) => x !== i));
+                  } else {
+                    setNewImages(
+                      newImages.filter((_, x) => x !== (i - existingImages.length))
+                    );
+                  }
+                }}
+                className="absolute top-1 right-1 bg-black/70 text-white text-xs w-6 h-6 rounded-full opacity-0 group-hover:opacity-100"
               >
-                <img
-                  src={img}
-                  className="w-full h-28 object-cover"
-                />
+                ✕
+              </button>
+            </div>
+          ))}
 
-                <button
-                  onClick={() => removeExistingImage(i)}
-                  className="absolute top-1 right-1 bg-black/70 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+          {existingImages.length === 0 && newImages.length === 0 && (
+            <div className="col-span-3 text-center text-gray-400 text-sm py-6">
+              No images uploaded yet
+            </div>
+          )}
+        </div>
 
-            {/* NEW IMAGES */}
-            {newImages.map((img, i) => (
-              <div
-                key={`new-${i}`}
-                className="relative group rounded-lg overflow-hidden border bg-gray-100"
-              >
-                <img
-                  src={URL.createObjectURL(img)}
-                  className="w-full h-28 object-cover"
-                />
 
-                <button
-                  onClick={() => removeNewImage(i)}
-                  className="absolute top-1 right-1 bg-black/70 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-
-            {/* EMPTY STATE */}
-            {existingImages.length === 0 && newImages.length === 0 && (
-              <div className="col-span-3 text-center text-gray-400 text-sm py-6">
-                No images uploaded yet
-              </div>
-            )}
-          </div>
         </div>
 
       </div>
