@@ -10,7 +10,7 @@ export default function AdminHeader() {
   };
 
   return (
-    <header className="h-24 bg-white flex items-center justify-between px-8 border-b">
+    <header className="h-24 bg-white flex items-center justify-between px-8">
       <div>
         <p className="text-sm text-gray-500">Admin Panel</p>
         <p className="text-base font-medium text-gray-900">
