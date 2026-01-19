@@ -26,8 +26,10 @@ export default function AttributesPage() {
   }
 
   async function createAttribute() {
-    if (!form.key || !form.label)
-      return alert("Key & Label required");
+    if (!form.key || !form.label) {
+      alert("Key & Label required");
+      return;
+    }
 
     await fetch("/api/attributes", {
       method: "POST",
@@ -53,58 +55,60 @@ export default function AttributesPage() {
     if (!confirm("Delete this attribute permanently?")) return;
 
     setLoadingId(id);
-    await fetch(`/api/attributes/${id}`, {
-      method: "DELETE",
-    });
+    await fetch(`/api/attributes/${id}`, { method: "DELETE" });
     await fetchAttributes();
     setLoadingId(null);
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl text-gray-900 dark:text-gray-100">
       {/* HEADER */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">
-          Attribute Manager
-        </h1>
+        <h1 className="text-2xl font-semibold">Attribute Manager</h1>
 
         <button
           onClick={createAttribute}
-          className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800"
+          className="bg-black dark:bg-white text-white dark:text-black px-6 py-2 rounded-lg hover:opacity-90 transition"
         >
           Add Attribute
         </button>
       </div>
 
       {/* CREATE FORM */}
-      <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-xl shadow-sm space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-gray-600">Key</label>
+            <label className="text-sm text-gray-600 dark:text-gray-400">
+              Key
+            </label>
             <input
               placeholder="thickness"
               value={form.key}
               onChange={(e) =>
                 setForm({ ...form, key: e.target.value })
               }
-              className="border rounded-lg p-2 w-full mt-1"
+              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-2 w-full mt-1"
             />
           </div>
 
           <div>
-            <label className="text-sm text-gray-600">Label</label>
+            <label className="text-sm text-gray-600 dark:text-gray-400">
+              Label
+            </label>
             <input
               placeholder="Thickness"
               value={form.label}
               onChange={(e) =>
                 setForm({ ...form, label: e.target.value })
               }
-              className="border rounded-lg p-2 w-full mt-1"
+              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-2 w-full mt-1"
             />
           </div>
 
           <div>
-            <label className="text-sm text-gray-600">Type</label>
+            <label className="text-sm text-gray-600 dark:text-gray-400">
+              Type
+            </label>
             <select
               value={form.type}
               onChange={(e) =>
@@ -113,7 +117,7 @@ export default function AttributesPage() {
                   type: e.target.value as any,
                 })
               }
-              className="border rounded-lg p-2 w-full mt-1"
+              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-2 w-full mt-1"
             >
               <option value="text">Text</option>
               <option value="number">Number</option>
@@ -122,7 +126,7 @@ export default function AttributesPage() {
           </div>
 
           <div className="flex items-end gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={form.isFilterable}
@@ -140,20 +144,18 @@ export default function AttributesPage() {
 
         {form.type === "select" && (
           <div>
-            <label className="text-sm text-gray-600">
+            <label className="text-sm text-gray-600 dark:text-gray-400">
               Allowed Values
             </label>
             <textarea
               placeholder="e.g. 6mm, 12mm, 18mm"
-              className="border rounded-lg p-2 w-full mt-1"
+              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg p-2 w-full mt-1"
               onChange={(e) =>
                 setForm({
                   ...form,
                   allowedValues: e.target.value
                     .split(",")
-                    .map((v) =>
-                      v.trim().toLowerCase()
-                    ),
+                    .map((v) => v.trim().toLowerCase()),
                 })
               }
             />
@@ -162,9 +164,9 @@ export default function AttributesPage() {
       </div>
 
       {/* ATTRIBUTE TABLE */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 text-sm text-gray-600">
+          <thead className="bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300">
             <tr>
               <th className="px-4 py-3 text-left">Key</th>
               <th className="px-4 py-3 text-left">Label</th>
@@ -178,13 +180,13 @@ export default function AttributesPage() {
             {attributes.map((attr) => (
               <tr
                 key={attr._id}
-                className="border-t hover:bg-gray-50"
+                className="border-t border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
               >
                 <td className="px-4 py-3 font-mono text-sm">
                   {attr.key}
                 </td>
                 <td className="px-4 py-3">{attr.label}</td>
-                <td className="px-4 py-3 text-gray-600">
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                   {attr.type}
                 </td>
                 <td className="px-4 py-3">
@@ -195,7 +197,7 @@ export default function AttributesPage() {
                   <button
                     onClick={() => deleteAttribute(attr._id!)}
                     disabled={loadingId === attr._id}
-                    className="text-red-600 hover:underline disabled:opacity-40"
+                    className="text-red-600 dark:text-red-400 hover:underline disabled:opacity-40"
                   >
                     Delete
                   </button>
@@ -207,7 +209,7 @@ export default function AttributesPage() {
               <tr>
                 <td
                   colSpan={5}
-                  className="px-4 py-6 text-center text-gray-500"
+                  className="px-4 py-6 text-center text-gray-500 dark:text-gray-400"
                 >
                   No attributes created yet
                 </td>

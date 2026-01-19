@@ -42,23 +42,23 @@ export default function BrandList() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-6xl text-gray-900 dark:text-gray-100">
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Brands</h1>
 
         <Link
           href="/admin/brands/create"
-          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800"
+          className="bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-lg hover:opacity-90 transition"
         >
           + Add Brand
         </Link>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 text-sm text-gray-600">
+          <thead className="bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300">
             <tr>
               <th className="px-4 py-3 text-left">Brand</th>
               <th className="px-4 py-3 text-left">Usage</th>
@@ -75,7 +75,7 @@ export default function BrandList() {
               return (
                 <tr
                   key={b._id}
-                  className={`border-t hover:bg-gray-50 ${
+                  className={`border-t border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
                     !b.isActive ? "opacity-60" : ""
                   }`}
                 >
@@ -85,9 +85,11 @@ export default function BrandList() {
                   </td>
 
                   {/* USAGE */}
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                     {b.productCount === 0 ? (
-                      <span className="text-gray-400">Unused</span>
+                      <span className="text-gray-400 dark:text-gray-500">
+                        Unused
+                      </span>
                     ) : (
                       <span className="font-medium">
                         {b.productCount} product
@@ -99,9 +101,13 @@ export default function BrandList() {
                   {/* STATUS */}
                   <td className="px-4 py-3 text-sm">
                     {b.isActive ? (
-                      <span className="text-green-600">Active</span>
+                      <span className="text-green-600 dark:text-green-400">
+                        Active
+                      </span>
                     ) : (
-                      <span className="text-gray-500">Disabled</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Disabled
+                      </span>
                     )}
                   </td>
 
@@ -111,11 +117,13 @@ export default function BrandList() {
                       onClick={() => toggleBrand(b)}
                       disabled={isLoading}
                       className={`relative w-11 h-6 rounded-full transition ${
-                        b.isActive ? "bg-green-500" : "bg-gray-300"
+                        b.isActive
+                          ? "bg-green-500"
+                          : "bg-gray-300 dark:bg-gray-600"
                       } ${isLoading ? "opacity-50" : ""}`}
                     >
                       <span
-                        className={`absolute top-0.5 h-5 w-5 bg-white rounded-full transition ${
+                        className={`absolute top-0.5 h-5 w-5 rounded-full transition bg-white dark:bg-gray-100 ${
                           b.isActive ? "right-0.5" : "left-0.5"
                         }`}
                       />
@@ -126,7 +134,7 @@ export default function BrandList() {
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/admin/brands/${b._id}/edit`}
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       Edit
                     </Link>
@@ -139,7 +147,7 @@ export default function BrandList() {
               <tr>
                 <td
                   colSpan={5}
-                  className="px-4 py-6 text-center text-gray-500"
+                  className="px-4 py-6 text-center text-gray-500 dark:text-gray-400"
                 >
                   No brands found
                 </td>
