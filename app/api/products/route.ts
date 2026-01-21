@@ -164,6 +164,7 @@ export async function GET(req: NextRequest) {
       {
         $project: {
           name: 1,
+          images: 1,
           brand: { _id: 1, name: 1 },
           createdAt: 1,
           isActive: 1,
