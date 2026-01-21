@@ -24,8 +24,10 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
+  // 1️⃣ Validate attributes
   await validateAttributes(body.attributes || {});
 
+  // 2️⃣ Validate brand
   const brand = await Brand.findById(body.brand);
   if (!brand || !brand.isActive) {
     return NextResponse.json(
@@ -34,13 +36,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 🔥 Build indexed search text
+  // 3️⃣ Check if product already exists by name (case-insensitive)
+  const existingProduct = await Product.findOne({
+    name: { $regex: `^${body.name}$`, $options: "i" },
+  });
+
+  if (existingProduct) {
+    return NextResponse.json(
+      { message: "Product with this name already exists" },
+      { status: 409 } // Conflict
+    );
+  }
+
+  // 4️⃣ Build indexed search text
   body.searchText = buildSearchText(body);
 
+  // 5️⃣ Create product
   const product = await Product.create(body);
 
   return NextResponse.json(product, { status: 201 });
 }
+
 
 /* ================= LIST + SEARCH PRODUCTS ================= */
 /**
