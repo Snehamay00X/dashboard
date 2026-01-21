@@ -5,7 +5,7 @@ import { verifySession, COOKIE_NAME } from "@/lib/adminAuth";
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow login page & login API
+  // Allow admin login page & login API
   if (
     pathname === "/admin/login" ||
     pathname === "/api/admin/login"
@@ -13,12 +13,8 @@ export function proxy(req: NextRequest) {
     return;
   }
 
-  // Protect admin pages and admin APIs
-  const isProtected =
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/api/admin");
-
-  if (!isProtected) return;
+  // 🔒 Protect ONLY admin pages (NOT APIs)
+  if (!pathname.startsWith("/admin")) return;
 
   const token = req.cookies.get(COOKIE_NAME)?.value;
 
@@ -26,7 +22,6 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 }
-
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*"],
 };
