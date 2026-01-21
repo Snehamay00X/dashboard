@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 
 /* ================= TYPES ================= */
 
@@ -16,6 +25,14 @@ interface Brand {
   name: string;
 }
 
+function arrayMove<T>(array: T[], from: number, to: number) {
+  const newArr = [...array];
+  const item = newArr.splice(from, 1)[0];
+  newArr.splice(to, 0, item);
+  return newArr;
+}
+
+
 /* ================= COMPONENT ================= */
 
 export default function CreateProduct() {
@@ -29,7 +46,8 @@ export default function CreateProduct() {
   const [attrSearch, setAttrSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [images, setImages] = useState<File[]>([]);
+  const [images, setImages] = useState<{ id: string; file: File }[]>([]);
+
 
   const [form, setForm] = useState({
     name: "",
@@ -68,9 +86,17 @@ export default function CreateProduct() {
   }, [attrDropdownOpen]);
 
   function handleImageUpload(files: FileList | null) {
-    if (!files) return;
-    setImages((prev) => [...prev, ...Array.from(files)]);
-  }
+  if (!files) return;
+
+  setImages((prev) => [
+    ...prev,
+    ...Array.from(files).map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+    })),
+  ]);
+}
+
 
   function removeImage(index: number) {
     setImages((prev) => prev.filter((_, i) => i !== index));
@@ -272,21 +298,120 @@ export default function CreateProduct() {
             </p>
           </label>
 
-          <div className="grid grid-cols-3 gap-3">
-            {images.map((img, i) => (
-              <div
-                key={i}
-                className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"
-              >
-                <img
-                  src={URL.createObjectURL(img)}
-                  className="w-full h-28 object-cover"
-                />
-              </div>
-            ))}
-          </div>
+          <DndContext
+  collisionDetection={closestCenter}
+  onDragEnd={({ active, over }) => {
+    if (!over || active.id === over.id) return;
+
+    setImages((prev) => {
+      const oldIndex = prev.findIndex((i) => i.id === active.id);
+      const newIndex = prev.findIndex((i) => i.id === over.id);
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  }}
+>
+  <SortableContext
+    items={images.map((img) => img.id)}
+    strategy={rectSortingStrategy}
+  >
+    <div className="grid grid-cols-3 gap-3">
+      {images.map((img, index) => (
+        <SortableImage
+          key={img.id}
+          id={img.id}
+          file={img.file}
+          index={index}
+          onRemove={() =>
+            setImages((prev) => prev.filter((i) => i.id !== img.id))
+          }
+        />
+      ))}
+    </div>
+  </SortableContext>
+</DndContext>
+
+
         </div>
       </div>
     </div>
   );
 }
+
+function SortableImage({
+  id,
+  file,
+  index,
+  onRemove,
+}: {
+  id: string;
+  file: File;
+  index: number;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 transition ${
+        isDragging ? "opacity-50 scale-95" : ""
+      }`}
+    >
+      {preview && (
+        <img
+          src={preview}
+          className="w-full h-28 object-cover select-none pointer-events-none"
+          draggable={false}
+        />
+      )}
+
+      {/* INDEX */}
+      <span className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
+        {index + 1}
+      </span>
+
+      {/* REMOVE — NOW WORKS */}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1 right-1 z-20 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-0.5 rounded"
+      >
+        ✕
+      </button>
+
+      {/* DRAG HANDLE (ONLY THIS DRAGS) */}
+      <div
+        {...listeners}
+        className="absolute bottom-1 right-1 z-20 cursor-grab bg-black/60 text-white text-xs px-2 py-0.5 rounded"
+        title="Drag to reorder"
+      >
+        ⇅
+      </div>
+    </div>
+  );
+}
+
+
+

@@ -24,10 +24,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
-  // 1️⃣ Validate attributes
   await validateAttributes(body.attributes || {});
 
-  // 2️⃣ Validate brand
   const brand = await Brand.findById(body.brand);
   if (!brand || !brand.isActive) {
     return NextResponse.json(
@@ -36,7 +34,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3️⃣ Check if product already exists by name (case-insensitive)
   const existingProduct = await Product.findOne({
     name: { $regex: `^${body.name}$`, $options: "i" },
   });
@@ -44,18 +41,34 @@ export async function POST(req: NextRequest) {
   if (existingProduct) {
     return NextResponse.json(
       { message: "Product with this name already exists" },
-      { status: 409 } // Conflict
+      { status: 409 }
     );
   }
 
-  // 4️⃣ Build indexed search text
+  if (body.images && !Array.isArray(body.images)) {
+    return NextResponse.json(
+      { message: "Invalid images format" },
+      { status: 400 }
+    );
+  }
+
+  body.images = Array.isArray(body.images) ? body.images : [];
   body.searchText = buildSearchText(body);
 
-  // 5️⃣ Create product
-  const product = await Product.create(body);
-
-  return NextResponse.json(product, { status: 201 });
+  try {
+    const product = await Product.create(body);
+    return NextResponse.json(product, { status: 201 });
+  } catch (err: any) {
+    if (err.code === 11000) {
+      return NextResponse.json(
+        { message: "Product with this name already exists" },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }
+
 
 
 /* ================= LIST + SEARCH PRODUCTS ================= */

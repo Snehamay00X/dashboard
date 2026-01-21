@@ -2,8 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 
 /* ================= TYPES ================= */
+
+ type EditableImage =
+  | { id: string; type: "old"; url: string }
+  | { id: string; type: "new"; file: File };
 
 interface AttributeDef {
   key: string;
@@ -35,8 +47,10 @@ export default function EditProduct() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [newImages, setNewImages] = useState<File[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
+ 
+
+const [images, setImages] = useState<EditableImage[]>([]);
+
 
   /* ---------------- LOAD DATA ---------------- */
   useEffect(() => {
@@ -51,7 +65,14 @@ export default function EditProduct() {
       });
 
       setSelectedAttrs(Object.keys(productData.attributes || {}));
-      setExistingImages(productData.images || []);
+      setImages(
+  (productData.images || []).map((url: string) => ({
+    id: crypto.randomUUID(),
+    type: "old",
+    url,
+  }))
+);
+
       setAttributesDef(attrDefs);
       setBrands(brands.filter((b: any) => b.isActive));
       setLoading(false);
@@ -73,32 +94,52 @@ export default function EditProduct() {
   }, [attrDropdownOpen]);
 
   function handleImageUpload(files: FileList | null) {
-    if (!files) return;
-    setNewImages((prev) => [...prev, ...Array.from(files)]);
-  }
+  if (!files) return;
 
-  function moveImage(from: number, to: number) {
-    const combined = [
-      ...existingImages.map((url) => ({ type: "old" as const, value: url })),
-      ...newImages.map((file) => ({ type: "new" as const, value: file })),
-    ];
+  setImages((prev) => [
+    ...prev,
+    ...Array.from(files).map((file) => ({
+      id: crypto.randomUUID(),
+      type: "new" as const,
+      file,
+    })),
+  ]);
+}
 
-    const item = combined.splice(from, 1)[0];
-    combined.splice(to, 0, item);
 
-    setExistingImages(combined.filter(i => i.type === "old").map(i => i.value));
-    setNewImages(combined.filter(i => i.type === "new").map(i => i.value));
-  }
+  // function moveImage(from: number, to: number) {
+  //   const combined = [
+  //     ...existingImages.map((url) => ({ type: "old" as const, value: url })),
+  //     ...newImages.map((file) => ({ type: "new" as const, value: file })),
+  //   ];
+
+  //   const item = combined.splice(from, 1)[0];
+  //   combined.splice(to, 0, item);
+
+  //   setExistingImages(combined.filter(i => i.type === "old").map(i => i.value));
+  //   setNewImages(combined.filter(i => i.type === "new").map(i => i.value));
+  // }
 
   async function updateProduct() {
-    await fetch(`/api/products/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(product),
-    });
+  // 1️⃣ ordered existing images (THIS IS THE SOURCE OF TRUTH)
+  const orderedImages = images
+    .filter((i) => i.type === "old")
+    .map((i) => i.url);
 
-    router.push("/admin/products");
-  }
+  console.log("Sending images to DB:", orderedImages);
+
+  await fetch(`/api/products/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...product,
+      images: orderedImages, // ✅ THIS FIXES ORDER
+    }),
+  });
+
+  router.push("/admin/products");
+}
+
 
   if (loading) return <div className="p-6 text-gray-600 dark:text-gray-400">Loading…</div>;
 
@@ -202,27 +243,140 @@ export default function EditProduct() {
           </div>
         </div>
 
-        {/* RIGHT — IMAGES */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-xl shadow-sm sticky top-6 space-y-4">
-          <h2 className="font-medium text-lg">Product Images</h2>
+       {/* RIGHT — IMAGES */}
+<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-xl shadow-sm sticky top-6 space-y-4">
+  <h2 className="font-medium text-lg">Product Images</h2>
 
-          <label className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-gray-50 dark:bg-gray-800">
-            <input hidden type="file" multiple onChange={(e) => handleImageUpload(e.target.files)} />
-            <p className="text-gray-500 dark:text-gray-400">Click or drag images here</p>
-          </label>
+  {/* UPLOAD */}
+  <label className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-gray-50 dark:bg-gray-800">
+    <input
+      hidden
+      type="file"
+      multiple
+      onChange={(e) => handleImageUpload(e.target.files)}
+    />
+    <p className="text-gray-500 dark:text-gray-400">
+      Click or drag images here
+    </p>
+  </label>
 
-          <div className="grid grid-cols-3 gap-3">
-            {existingImages.map((url, i) => (
-              <div
-                key={i}
-                className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"
-              >
-                <img src={url} className="w-full h-28 object-cover" />
-              </div>
-            ))}
-          </div>
-        </div>
+  {/* DND GRID */}
+  <DndContext
+    collisionDetection={closestCenter}
+    onDragEnd={({ active, over }) => {
+      if (!over || active.id === over.id) return;
+
+      setImages((prev) => {
+        const oldIndex = prev.findIndex((i) => i.id === active.id);
+        const newIndex = prev.findIndex((i) => i.id === over.id);
+
+        const copy = [...prev];
+        const [moved] = copy.splice(oldIndex, 1);
+        copy.splice(newIndex, 0, moved);
+        return copy;
+      });
+    }}
+  >
+    <SortableContext
+      items={images.map((i) => i.id)}
+      strategy={rectSortingStrategy}
+    >
+      <div className="grid grid-cols-3 gap-3">
+        {images.map((img, index) => (
+          <SortableEditImage
+            key={img.id}
+            image={img}
+            index={index}
+            onRemove={() =>
+              setImages((prev) => prev.filter((i) => i.id !== img.id))
+            }
+          />
+        ))}
+      </div>
+    </SortableContext>
+  </DndContext>
+</div>
+
+
       </div>
     </div>
   );
 }
+
+
+function SortableEditImage({
+  image,
+  index,
+  onRemove,
+}: {
+  image: EditableImage;
+  index: number;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: image.id });
+
+  const [preview, setPreview] = useState<string | null>(
+    image.type === "old" ? image.url : null
+  );
+
+  useEffect(() => {
+    if (image.type === "new") {
+      const url = URL.createObjectURL(image.file);
+      setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [image]);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 transition ${
+        isDragging ? "opacity-50 scale-95" : ""
+      }`}
+    >
+      {preview && (
+        <img
+          src={preview}
+          className="w-full h-28 object-cover select-none pointer-events-none"
+          draggable={false}
+        />
+      )}
+
+      <span className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
+        {index + 1}
+      </span>
+
+      {/* REMOVE */}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1 right-1 z-20 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-0.5 rounded"
+      >
+        ✕
+      </button>
+
+      {/* DRAG HANDLE */}
+      <div
+        {...listeners}
+        className="absolute bottom-1 right-1 z-20 cursor-grab bg-black/60 text-white text-xs px-2 py-0.5 rounded"
+      >
+        ⇅
+      </div>
+    </div>
+  );
+}
+

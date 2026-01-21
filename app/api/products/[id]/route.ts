@@ -5,6 +5,7 @@ import { dbConnect } from "@/lib/dbConnect";
 import Product from "@/models/Products";
 import { validateAttributes } from "@/helpers/validateAttributes";
 import mongoose from "mongoose";
+import { buildSearchText } from "@/lib/buildSearchText";
 
 /* ================= GET SINGLE PRODUCT ================= */
 export async function GET(
@@ -41,7 +42,7 @@ export async function PUT(
 ) {
   await dbConnect();
 
-  const { id } = await ctx.params; // ✅
+  const { id } = await ctx.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return NextResponse.json(
@@ -52,23 +53,65 @@ export async function PUT(
 
   const body = await req.json();
 
-  if (body.attributes) {
-    await validateAttributes(body.attributes);
-  }
-
-  const updated = await Product.findByIdAndUpdate(id, body, {
-    new: true,
-  }).lean();
-
-  if (!updated) {
+  // 1️⃣ Load existing product ONCE
+  const existingProduct = await Product.findById(id).lean();
+  if (!existingProduct) {
     return NextResponse.json(
       { message: "Product not found" },
       { status: 404 }
     );
   }
 
+  // 2️⃣ Validate attributes
+  if (body.attributes) {
+    await validateAttributes(body.attributes);
+  }
+
+  // 3️⃣ Validate images
+  if (body.images !== undefined) {
+    if (!Array.isArray(body.images)) {
+      return NextResponse.json(
+        { message: "Invalid images format" },
+        { status: 400 }
+      );
+    }
+    body.images = body.images.filter(Boolean);
+  }
+
+  // 4️⃣ Prevent duplicate name
+  if (body.name) {
+    const duplicate = await Product.findOne({
+      _id: { $ne: id },
+      name: { $regex: `^${body.name}$`, $options: "i" },
+    });
+
+    if (duplicate) {
+      return NextResponse.json(
+        { message: "Product with this name already exists" },
+        { status: 409 }
+      );
+    }
+  }
+
+  // 5️⃣ Build search text SAFELY
+  const mergedForSearch = {
+    ...existingProduct,
+    ...body,
+  };
+
+  body.searchText = buildSearchText(mergedForSearch);
+
+  // 6️⃣ Update
+  const updated = await Product.findByIdAndUpdate(id, body, {
+    new: true,
+    runValidators: true,
+  }).lean();
+
   return NextResponse.json(updated);
 }
+
+
+
 
 /* ================= DELETE PRODUCT ================= */
 export async function DELETE(
